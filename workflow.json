@@ -1,0 +1,41 @@
+{
+  "name": "Account Health Check",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Account Health Check",
+        "formFields": {
+          "values": [
+            { "fieldLabel": "Account name" },
+            { "fieldLabel": "CSAT", "fieldType": "number" },
+            { "fieldLabel": "NPS", "fieldType": "number" },
+            { "fieldLabel": "Days to renewal", "fieldType": "number" },
+            { "fieldLabel": "Days since last contact", "fieldType": "number" }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [0, 0],
+      "id": "c403b686-a8ad-4a80-a609-547a242819b5",
+      "name": "On form submission"
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nconst csat = Number(d['CSAT']);\nconst nps = Number(d['NPS']);\nconst renewal = Number(d['Days to renewal']);\nconst contact = Number(d['Days since last contact']);\n\nlet risk = 0;\nconst reasons = [];\nif (csat < 7) { risk += 2; reasons.push('Low CSAT'); }\nelse if (csat < 9) { risk += 1; reasons.push('CSAT slipping'); }\nif (nps < 6) { risk += 2; reasons.push('Low NPS'); }\nelse if (nps < 8) { risk += 1; reasons.push('NPS passive'); }\nif (contact > 30) { risk += 2; reasons.push('No contact in over 30 days'); }\nelse if (contact > 21) { risk += 1; reasons.push('Contact overdue'); }\nif (renewal < 60 && risk > 0) { risk += 1; reasons.push('Renewal inside 60 days'); }\n\nconst status = risk >= 4 ? 'Red' : risk >= 2 ? 'Yellow' : 'Green';\nconst action = status === 'Red' ? 'Call the daily user lead today and update the sponsor'\n  : status === 'Yellow' ? 'Schedule a check in this week'\n  : 'Keep the normal cadence and look for expansion';\n\nreturn [{ json: { account: d['Account name'], status, reasons: reasons.join(', ') || 'No flags', action } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [224, 0],
+      "id": "6ca86dd1-6998-478a-b004-2e368cbbd31f",
+      "name": "Code in JavaScript"
+    }
+  ],
+  "connections": {
+    "On form submission": {
+      "main": [[{ "node": "Code in JavaScript", "type": "main", "index": 0 }]]
+    }
+  },
+  "pinData": {}
+}
